@@ -27,13 +27,12 @@ Skills, MCP, and Kontext are complementary layers — not competitors.
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  KONTEXT                                                    │
-│  How to do it safely                                        │
+│  Identity Control Plane                                     │
 │  ─────────────────────────────────────────────────────────  │
-│  • Auth (OAuth, tokens, credentials)                        │
-│  • Permissions (what the agent can access)                  │
-│  • Observability (see every call, latency, success/fail)    │
-│  • Governance (policies, approvals, audit trails)           │
-│  • Revocation (kill access instantly when needed)           │
+│  • User Authorization (OAuth with PKCE, user consent)       │
+│  • Secure Credentials (encrypted vault, runtime injection)  │
+│  • Audit Trail (every tool call logged)                     │
+│  • MCP Protocol (works with any client, any LLM)            │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -47,41 +46,76 @@ The agent can call tools but doesn't know *when* or *how*. It has access to Line
 
 ### MCP without Kontext
 The agent can call tools but:
-- Auth is hardcoded or missing
+- Auth is hardcoded (`LINEAR_API_KEY=sk_live_xxx`)
 - No visibility into what it's doing
-- No way to revoke access
+- No user consent — just a static key
 - No audit trail
 - Works in demos, breaks in production
 
 ### The Full Stack
 ```
-Skill: "When a user reports a bug, create a Linear issue with priority based on severity..."
+Skill: "When a user reports a bug, create a Linear issue..."
   │
   ▼
 MCP: linear.create_issue(title, description, priority, team)
   │
   ▼
-Kontext: OAuth handled, call logged, scoped to issues.write, revocable
+Kontext: User authorized → token injected → call logged → scoped access
 ```
+
+## Traditional Auth vs Kontext
+
+| Feature | Traditional | Kontext |
+|---------|-------------|---------|
+| Trust Anchor | Static API Key | User Consent (OAuth) |
+| Credential Storage | Env var (plaintext) | Encrypted Vault (Managed) |
+| Access | Permanent until revoked | Scoped & Audited |
+| Scope | All or Nothing | Per-Integration |
 
 ## The Production Gap
 
-Everyone debates Skills vs MCP. But neither works in production without solving:
+Everyone debates Skills vs MCP. But both assume auth is solved.
 
-| Problem | Demo Mode | Production |
-|---------|-----------|------------|
-| Auth | Hardcoded API key | OAuth with refresh, per-agent tokens |
-| Permissions | Full access | Scoped by task, least privilege |
-| Visibility | Console.log | Dashboard, alerts, audit trail |
-| Revocation | Restart the agent | Instant, granular, cascading |
-| Compliance | "Trust me" | Audit logs, approval workflows |
+**The real questions:**
+- Where do credentials come from?
+- Who authorized this access?
+- What did the agent actually do?
+- How do I revoke access?
 
-**Kontext closes this gap.**
+**Kontext answers:**
+- Credentials from encrypted vault, injected at runtime
+- User authorized via OAuth with PKCE
+- Every tool call logged with full audit trail
+- Revoke per-user, per-integration, instantly
 
 ## The Narrative
 
-> "Skills tell the agent what to do. MCP gives the agent access to tools. Kontext makes sure those tools are safe to use in production."
+> "Skills tell the agent what to do. MCP gives access to tools. Kontext handles identity — OAuth, credentials, audit — so you don't have to."
 
-Or shorter:
+Or the one-liner:
 
-> "Skills vs MCP is the wrong debate. The real question is: how do you ship either one to production?"
+> "Stop sharing your GH_TOKEN with robots."
+
+## Code Comparison
+
+```typescript
+// ❌ Traditional: hardcoded key, no audit, full access forever
+LINEAR_API_KEY=sk_live_xxx npx mcporter call linear.create_issue ...
+
+// ✓ Kontext: user-consented, scoped, audited, revocable
+import { KontextMcp } from '@kontext-dev/sdk';
+
+const kontext = new KontextMcp({
+  clientId: 'your-client-id',
+  redirectUri: 'http://localhost:3333/callback',
+  onAuthRequired: async (authUrl) => {
+    await open(authUrl.toString());
+    return await waitForCallback();
+  },
+});
+
+// User authorizes once, then agent can call tools
+const tools = await kontext.listTools();
+const result = await kontext.callTool('github_list_repos', { owner: 'acme' });
+// → Every call logged, scoped to what user authorized
+```
