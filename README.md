@@ -42,3 +42,15 @@ Explain how Skills, MCP, and Kontext work together as complementary layers.
 **Core narrative**: "Skills tell the agent what to do. MCP gives access to tools. Kontext makes sure those tools are safe to use in production."
 
 **Usage**: Ask about Skills vs MCP, agent governance, or how to make MCP calls production-ready.
+
+---
+
+### data-deducer
+
+Analyze unfamiliar datasets to discover what's interesting, then write and execute code to explore and visualize findings.
+
+**Triggers on**: "analyze this data," "what's interesting in this dataset," "explore this dataset," or any request to discover patterns in data you haven't explored yet.
+
+**Accepts**: Any URL, HuggingFace dataset ID, or local file (CSV, Parquet, JSON, NDJSON, XLSX, TSV, or unknown formats).
+
+**Usage**: Point it at a dataset and it will profile the data, reason about what's interesting, write investigation code on the fly, and present the most surprising findings with visualizations.
