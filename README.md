@@ -54,3 +54,15 @@ Analyze unfamiliar datasets to discover what's interesting, then write and execu
 **Accepts**: Any URL, HuggingFace dataset ID, or local file (CSV, Parquet, JSON, NDJSON, XLSX, TSV, or unknown formats).
 
 **Usage**: Point it at a dataset and it will profile the data, reason about what's interesting, write investigation code on the fly, and present the most surprising findings with visualizations.
+
+---
+
+### use-graphite
+
+Manage stacked pull request workflows with the Graphite CLI (`gt`) in Graphite-enabled repositories.
+
+**Triggers on**: Requests involving stacked branch/PR workflows, Graphite branch creation, stack submission, syncing/restacking, or teammate stack collaboration.
+
+**Behavior**: Detects whether Graphite is enabled in the current repo first, then prefers `gt` commands (`gt create`, `gt modify`, `gt submit`, `gt sync`, `gt restack`, `gt get`) over ad-hoc `git push` and `gh pr create`.
+
+**Usage**: Ask to use `$use-graphite` when working in a Graphite-initialized repository.
