@@ -7,6 +7,54 @@ description: Integrate the Kontext identity control plane into TypeScript applic
 
 Integrate the Kontext identity control plane into TypeScript applications. Kontext provides runtime identity, scoped credentials, and audit trails for AI agents.
 
+## Step 1: Scan the Codebase First (MANDATORY)
+
+Before asking the user anything, **analyze the project** to determine the right integration path. Run these searches in parallel:
+
+1. **Read `package.json`** — check dependencies for: `react`, `next`, `express`, `ai` (Vercel AI SDK), `agents` (Cloudflare), `@modelcontextprotocol/sdk`, `@kontext-dev/js-sdk` (already installed?)
+2. **Find framework config files** — look for `next.config.*`, `wrangler.toml`, `vite.config.*`, `tsconfig.json`
+3. **Find existing auth/credential patterns** — search for `API_KEY`, `Bearer`, `accessToken`, `Authorization`, `process.env.*_TOKEN`, `process.env.*_KEY`, hardcoded API keys
+4. **Find external API calls** — search for `fetch(`, `axios`, API client imports (e.g., `@octokit`, `@slack/web-api`, `@linear/sdk`)
+5. **Find agent/AI patterns** — search for `generateText`, `streamText`, `useChat`, `useCompletion`, `McpServer`, `Agent`, LLM client instantiation
+
+## Step 2: Classify the Architecture
+
+Based on scan results, classify into one or more integration paths:
+
+| If you find... | Integration path | Reference |
+|----------------|-----------------|-----------|
+| `express` + `@modelcontextprotocol/sdk` | **Server SDK** — Express middleware, scoped credentials | `references/server.md` |
+| `react` or `next` (frontend) | **React hooks** — `KontextProvider`, `useKontext` | `references/frameworks.md` (React section) |
+| `ai` (Vercel AI SDK) with `generateText`/`streamText` | **AI adapter** — `toKontextTools` converts Kontext tools to CoreTool format | `references/frameworks.md` (Vercel section) |
+| `agents` (Cloudflare) or `wrangler.toml` | **Cloudflare adapter** — `withKontext` mixin | `references/frameworks.md` (Cloudflare section) |
+| Client app with auth flows, no server | **Client SDK** — `createKontextClient` with OAuth | `references/client.md` |
+| Infrastructure/automation scripts | **Management SDK** — programmatic control | `references/management.md` |
+
+**Most full-stack apps need multiple paths.** A typical React + Express app needs:
+- Server SDK for the backend
+- React hooks for the frontend
+- Possibly AI adapter if using Vercel AI SDK
+
+## Step 3: Identify Integration Points
+
+Look for places where the app accesses external services. These are where Kontext replaces hardcoded credentials:
+
+- **Hardcoded API keys** → Replace with `kontext.require("integration-name", token)`
+- **Environment variable tokens** (`process.env.GITHUB_TOKEN`) → Replace with scoped Kontext credentials
+- **OAuth flows built from scratch** → Replace with Kontext's managed OAuth
+- **Direct API calls** to GitHub, Slack, Linear, etc. → Wrap with Kontext credential exchange
+
+## Step 4: Present a Concrete Plan
+
+After scanning, present your findings to the user:
+
+1. **What you found** — "This is a Next.js app with a React frontend, Express API routes, and Vercel AI SDK. It calls the GitHub API using a hardcoded PAT in `lib/github.ts`."
+2. **What Kontext replaces** — "Kontext would replace the hardcoded `GITHUB_TOKEN` with scoped, user-consented credentials via OAuth."
+3. **Integration plan** — List the specific files to modify and which SDK path applies to each.
+4. **Ask for confirmation** before making changes.
+
+Do NOT just list integration paths and ask the user to pick. Figure it out from the code.
+
 ## Documentation Index
 
 Fetch the complete documentation index at: https://docs.kontext.dev/llms.txt
@@ -17,30 +65,6 @@ Use this file to discover all available pages before exploring further.
 ```bash
 npm install @kontext-dev/js-sdk
 ```
-
-## Detect Integration Path
-
-Determine which path fits the developer's architecture:
-
-1. **What are they building?**
-   - MCP server (Express/Node) -> Server SDK
-   - App-facing client with auth -> Client SDK
-   - Vercel AI SDK app -> AI adapter
-   - React frontend -> React hooks
-   - Cloudflare Workers/Agents -> Cloudflare adapter
-   - Infrastructure automation -> Management SDK
-
-2. **Read the matching reference file** for implementation details:
-   - **Server SDK**: `references/server.md` - Express middleware, MCP servers, scoped credentials
-   - **Client SDK**: `references/client.md` - Auth flows, tool execution, token storage
-   - **Frameworks**: `references/frameworks.md` - Vercel AI SDK, React hooks, Cloudflare Agents
-   - **Management**: `references/management.md` - Programmatic control of applications, integrations, sessions
-
-3. **Multiple paths combine**. A typical full-stack app uses:
-   - Server SDK for the backend MCP server
-   - Client SDK or Orchestrator for the app layer
-   - React hooks for the frontend
-   - AI adapter if using Vercel AI SDK
 
 ## Subpath Exports
 
@@ -124,3 +148,4 @@ try {
 - ALWAYS use `kontext.require()` or `kontext.requireCredentials()` for scoped credentials instead of passing raw tokens.
 - ALWAYS install peer dependencies for the specific subpath export being used.
 - The `Kontext` server class auto-reads `KONTEXT_CLIENT_SECRET` from env - do not pass it in constructor unless overriding.
+- ALWAYS scan the codebase before recommending an integration path. Never ask the user to pick from a menu.
