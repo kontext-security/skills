@@ -32,3 +32,17 @@ Configure Bring your own auth on a confidential Kontext application with a servi
 **Does not**: Retrieve credentials with the server SDK. That should stay a separate skill.
 
 **Usage**: Ask to use `$kontext-byoa-setup` when setting up Bring your own auth through the Management API.
+
+---
+
+### kontext-sdk-credentials
+
+Retrieve a stored integration credential for a confidential Kontext application and a platform user ID.
+
+**Triggers on**: Requests to fetch GitHub, Google, or other stored integration credentials from a backend using clientId, clientSecret, and userId, or to verify whether a user has already connected an integration.
+
+**Does**: Authenticates the confidential app, exchanges `userId` for an integration-scoped token, and explains clearly when the user still needs to connect the integration first.
+
+**Does not**: Configure Bring your own auth or create hosted connect sessions.
+
+**Usage**: Ask to use `$kontext-sdk-credentials` when retrieving stored credentials from the server side.

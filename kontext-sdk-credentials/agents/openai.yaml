@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kontext Server Credential Retrieval"
+  short_description: "Retrieve a stored integration credential for a confidential app and platform user ID"
+  default_prompt: "Use $kontext-sdk-credentials to retrieve a stored integration credential from a confidential Kontext application."
