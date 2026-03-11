@@ -21,6 +21,14 @@ function required(name, value) {
   return value;
 }
 
+function requiredTrimmed(name, value) {
+  const normalized = required(name, value).trim();
+  if (!normalized) {
+    throw new Error(`${name} must not be empty.`);
+  }
+  return normalized;
+}
+
 function maskToken(token) {
   if (token.length <= 10) {
     return `${token.slice(0, 2)}***`;
@@ -55,18 +63,14 @@ async function main() {
     "KONTEXT_CLIENT_SECRET",
     values["client-secret"] || process.env.KONTEXT_CLIENT_SECRET,
   );
-  const integration = required(
+  const integration = requiredTrimmed(
     "KONTEXT_INTEGRATION",
     values.integration || process.env.KONTEXT_INTEGRATION,
   );
-  const userId = required(
+  const userId = requiredTrimmed(
     "PLATFORM_USER_ID",
     values["user-id"] || process.env.PLATFORM_USER_ID,
-  ).trim();
-
-  if (!userId) {
-    throw new Error("PLATFORM_USER_ID must not be empty.");
-  }
+  );
 
   const body = new URLSearchParams({
     grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
@@ -92,21 +96,29 @@ async function main() {
   }));
 
   if (!response.ok) {
+    const errorDescription = String(payload?.error_description || "");
+    const normalizedDescription = errorDescription.toLowerCase();
     const isMissingConnection =
       payload?.error === "integration_required" ||
-      String(payload?.error_description || "")
-        .toLowerCase()
-        .includes("not connected");
+      normalizedDescription.includes("not connected");
+    const isSharedTokenMisconfigured =
+      payload?.error === "invalid_target" &&
+      normalizedDescription.includes("shared server token");
 
     if (isMissingConnection) {
       throw new Error(
-        `The platform user has not connected ${integration} yet. Complete the hosted connect flow first.`,
+        `No credential is available for platform user '${userId}' on integration '${integration}'. If this integration uses user-managed auth, the user still needs to connect it through hosted connect. If it is supposed to use a shared admin-managed server token, make sure this platform user is already known to the app.`,
+      );
+    }
+
+    if (isSharedTokenMisconfigured) {
+      throw new Error(
+        `Integration '${integration}' is configured for a shared admin-managed server token, but that token is missing or unusable. Ask an admin to update the shared server token.`,
       );
     }
 
     throw new Error(
-      payload?.error_description ||
-        `Credential retrieval failed: ${response.status}`,
+      errorDescription || `Credential retrieval failed: ${response.status}`,
     );
   }
 
@@ -135,9 +147,16 @@ async function main() {
   console.log(`- Token type: ${result.tokenType}`);
   console.log(
     `- Expires in: ${
-      typeof result.expiresIn === "number" ? `${result.expiresIn}s` : "unknown"
+      typeof result.expiresIn === "number"
+        ? `${result.expiresIn}s`
+        : "not provided"
     }`,
   );
+  if (typeof result.expiresIn !== "number") {
+    console.log(
+      "- Notes: The API did not return expires_in. This can happen for admin-managed shared tokens and other long-lived credentials.",
+    );
+  }
 
   if (values["show-token"] || process.env.KONTEXT_SHOW_TOKEN === "true") {
     console.log(`- Access token: ${result.accessToken}`);
