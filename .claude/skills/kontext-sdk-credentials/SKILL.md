@@ -1,54 +1,54 @@
 ---
 name: kontext-sdk-credentials
-description: Set up and retrieve server-side integration credentials for a confidential Kontext application. Use when asked to create or update an app for server SDK retrieval, attach an existing integration, create or update a custom shared-token integration with a service account, or implement TypeScript code that calls Kontext.require(...) with clientId, clientSecret, and userId. Do not use this skill to configure Bring your own auth or create hosted connect sessions.
+description: Configure and retrieve server-side integration credentials for a confidential Kontext application. Use when asked to create or update a confidential app for server SDK retrieval, attach an existing integration, create or update a custom remote integration with authMode oauth, user_token, server_token, or none, ensure a known template like GitHub, or implement TypeScript code that calls Kontext.require(...) with clientId, clientSecret, and userId. Do not use this skill to configure Bring your own auth or create hosted connect sessions.
 ---
 
-# Kontext Server Credential Setup and Retrieval
+# Kontext Server Credential Lifecycle
 
-Use this skill when the work is about **server-side credential retrieval** for a **confidential** Kontext application.
+Use this skill when the work is about the **server-side credential retrieval** flow built around `Kontext.require(...)`.
 
-This skill covers two adjacent workflows:
-- **admin setup with a service account** so the app and integrations are ready
-- **server SDK retrieval** with `Kontext.require(...)`
-
-This skill covers:
-- creating or resolving a confidential application used by the server SDK
-- attaching an existing integration to that app
-- creating or updating a custom integration with `authMode: "server_token"`
-- rotating the shared server token on that custom integration
-- implementing server-side TypeScript that retrieves the credential later with `Kontext.require(...)`
-- explaining clearly whether the next action belongs to an admin or an end user
+This skill covers the full remote integration lifecycle for that flow:
+- create or resolve a **confidential** application used by the server SDK
+- attach an existing integration to that application
+- create or update a custom remote integration with auth mode:
+  - `oauth`
+  - `user_token`
+  - `server_token`
+  - `none`
+- ensure a known integration recipe when the exact canonical config is known, for example `github`
+- implement TypeScript with the Management SDK for setup and the Server SDK for runtime retrieval
+- explain whether the next action belongs to an admin or an end user
 
 This skill does **not** cover:
-- configuring Bring your own auth or external auth
-- setting issuer, JWKS, audience, or partner API keys
-- creating hosted connect sessions
+- Bring your own auth or external auth
+- issuer, JWKS, audience, partner API keys, or avoiding double auth
+- hosted connect session creation
 
-If the user wants to trust their own auth system and avoid double auth, use `kontext-byoa-setup` instead. Keep that skill separate.
+If the user wants to trust their own auth system and skip double auth, use `kontext-byoa-setup` instead.
+
+## Scope boundary
+
+This skill is about remote integrations that use `Kontext.require(...)`.
+
+That means:
+- `oauth`, `user_token`, and `server_token` are fully in scope
+- `none` is in scope for app attachment and config updates, but there is no runtime credential to retrieve
+
+Keep `internal_mcp_credentials` out of this skill unless the user explicitly asks for that separate `requireCredentials(...)` flow.
 
 ## What this feature is
 
-Server-side credential retrieval can use two credential models:
-- a user-managed credential the user connected earlier, for example OAuth or user API key
-- an admin-managed shared server token that is already available to every end user of the attached app
+The same server-side retrieval call can return three practical credential models:
+- a user OAuth credential the user connected earlier
+- a user-managed API key or PAT from a `user_token` integration
+- an admin-managed shared server token from a `server_token` integration
 
-The runtime retrieval call is:
+The runtime retrieval call uses:
 - the app's **OAuth Client ID**
 - the app's **OAuth Client Secret**
 - the platform's own stable **userId**
 
-The admin setup side uses:
-- a **service account** for the Management API
-- the target **application**
-- either an existing integration to attach or a custom integration to create/update
-- an optional **shared server token** for `server_token` mode
-
-The backend later retrieves the credential with:
-- the app's **OAuth Client ID**
-- the app's **OAuth Client Secret**
-- the platform's own stable **userId**
-
-In the server SDK, that looks like:
+In TypeScript:
 
 ```ts
 import { Kontext } from "@kontext-dev/js-sdk/server";
@@ -63,38 +63,41 @@ const credential = await kontext.require("github", {
 });
 ```
 
-What changes with shared server tokens:
-- end users do not connect anything for that integration
-- the same `kontext.require(...)` call returns the shared token directly
-- `expires_in` may be omitted, which is expected for shared admin-managed tokens
+Behavior by auth mode:
+- `oauth`: end user must connect first, then `Kontext.require(...)` returns that user's OAuth credential
+- `user_token`: end user must save their own API key or PAT first, then `Kontext.require(...)` returns that user's bearer token
+- `server_token`: admin sets one shared token, then every end user of attached apps can retrieve it immediately with the same `Kontext.require(...)` call
+- `none`: there is nothing to retrieve with `Kontext.require(...)`
 
-Important: this skill is about **credential setup and retrieval**. It is not the right place to teach BYOA JWT trust or hosted connect bootstrap.
+Important: this skill is about **credential setup and retrieval**. It is not the place to teach BYOA JWT trust or hosted connect bootstrap.
 
 ## Required inputs
 
-For **admin setup** with a service account, read these from the environment:
+For **admin setup** with a service account:
 - `KONTEXT_API_BASE_URL` (optional, defaults to `https://api.kontext.dev`)
 - `MANAGEMENT_API_RESOURCE` (optional, defaults to `${KONTEXT_API_BASE_URL}/api/v1`)
 - `KONTEXT_SERVICE_ACCOUNT_CLIENT_ID`
 - `KONTEXT_SERVICE_ACCOUNT_CLIENT_SECRET`
 - `KONTEXT_APPLICATION_ID`, or `KONTEXT_APPLICATION_NAME`
 
-Optional app setup inputs:
+Optional application setup:
 - `KONTEXT_CREATE_APPLICATION=true`
 - `KONTEXT_APPLICATION_REDIRECT_URIS_JSON`
 
-Attach an existing integration:
+Target integration selection:
 - `KONTEXT_INTEGRATION_ID`, or `KONTEXT_INTEGRATION_NAME`
+- `KONTEXT_KNOWN_INTEGRATION`
 
-Create or update a custom shared-token integration:
-- `KONTEXT_CUSTOM_INTEGRATION_NAME`
-- `KONTEXT_CUSTOM_INTEGRATION_URL`
+Optional integration mutation:
+- `KONTEXT_INTEGRATION_URL`
+- `KONTEXT_INTEGRATION_AUTH_MODE`
+- `KONTEXT_INTEGRATION_OAUTH_PROVIDER`
+- `KONTEXT_INTEGRATION_OAUTH_ISSUER`
+- `KONTEXT_INTEGRATION_OAUTH_SCOPES_JSON`
 - `KONTEXT_SERVER_TOKEN`
-
-Optional setup flags:
 - `KONTEXT_VALIDATE_INTEGRATION=true`
 
-For **server-side retrieval**, read these from the environment:
+For **runtime retrieval**:
 - `KONTEXT_API_BASE_URL` (optional, defaults to `https://api.kontext.dev`)
 - `KONTEXT_CLIENT_ID`
 - `KONTEXT_CLIENT_SECRET`
@@ -109,11 +112,11 @@ Optional:
 Follow these rules strictly:
 
 - Never print `KONTEXT_CLIENT_SECRET` unless the user explicitly asks.
-- Never write client secrets or returned access tokens to tracked files.
-- Never commit secrets or live tokens.
 - Never print `KONTEXT_SERVICE_ACCOUNT_CLIENT_SECRET` unless the user explicitly asks.
-- Never print a shared `KONTEXT_SERVER_TOKEN` unless the user explicitly asks.
-- By default, do not print the full retrieved access token unless the user explicitly asks for it or the command is being piped directly into another local process.
+- Never print `KONTEXT_SERVER_TOKEN` unless the user explicitly asks.
+- Never write secrets or live tokens to tracked files.
+- Never commit secrets or live tokens.
+- By default, do not print the full retrieved access token unless the user explicitly asks for it.
 - If retrieval fails because the user has not connected the integration yet, explain that plainly instead of retrying blindly.
 - If retrieval fails because the shared server token is missing or broken, say that an admin must update the integration configuration.
 
@@ -121,15 +124,15 @@ Follow these rules strictly:
 
 1. Decide whether the user needs:
    - admin setup
-   - server-side retrieval
+   - runtime retrieval
    - or both
 2. For admin setup, run the bundled setup helper:
 
 ```bash
-node scripts/manage-shared-integration.mjs
+node scripts/manage-credential-integration.mjs
 ```
 
-3. For server-side retrieval, run the bundled retrieval helper:
+3. For runtime retrieval, run the bundled retrieval helper:
 
 ```bash
 node scripts/require-credential.mjs
@@ -138,19 +141,19 @@ node scripts/require-credential.mjs
 4. If setup is about an existing integration:
    - resolve it by exact ID or exact name
    - attach it to the app
-   - do not pretend there is a separate “template integration” API primitive if the job is really just attaching an existing integration
-5. If setup is about a custom shared-token integration:
+   - if mutation inputs are present, update that integration before attachment
+5. If setup is about a known template integration:
+   - use `KONTEXT_KNOWN_INTEGRATION` when the skill has an exact recipe, for example `github`
+   - do not invent recipe values for unknown templates
+6. If setup is about a custom remote integration:
    - create it when missing
-   - otherwise patch it with `authMode: "server_token"` and the new `serverToken`
-   - attach it to the app
-6. If the retrieval helper reports that the integration is not connected:
-   - for user-managed integrations, tell the user the platform user still needs to connect that integration first
-   - if the integration is supposed to use a shared server token, tell the user to verify the platform user exists in the app and that the integration is attached
-   - do not mix in BYOA setup unless they ask
-7. If the retrieval helper reports that the shared server token is misconfigured:
-   - tell the user an admin needs to update the shared server token
-   - do not mix in BYOA setup unless they ask
-8. Summarize the result.
+   - otherwise patch it with the supplied auth-mode-specific fields
+7. If runtime retrieval fails with `integration_required`:
+   - for `oauth` or `user_token`, tell the user the end user still needs to connect that integration
+   - for `server_token`, tell the user to verify the app knows that platform user and the integration is attached
+8. If runtime retrieval fails with `invalid_target` mentioning the shared server token:
+   - tell the user an admin must update the shared token
+9. Summarize the result.
 
 ## Preferred command pattern
 
@@ -162,7 +165,7 @@ KONTEXT_SERVICE_ACCOUNT_CLIENT_SECRET=... \
 KONTEXT_APPLICATION_NAME="My Server App" \
 KONTEXT_CREATE_APPLICATION=true \
 KONTEXT_APPLICATION_REDIRECT_URIS_JSON='["http://localhost:3000/callback"]' \
-node scripts/manage-shared-integration.mjs
+node scripts/manage-credential-integration.mjs
 ```
 
 Attach an existing integration to an app:
@@ -171,26 +174,73 @@ Attach an existing integration to an app:
 KONTEXT_SERVICE_ACCOUNT_CLIENT_ID=... \
 KONTEXT_SERVICE_ACCOUNT_CLIENT_SECRET=... \
 KONTEXT_APPLICATION_ID=app_... \
-KONTEXT_INTEGRATION_NAME="GitHub" \
-node scripts/manage-shared-integration.mjs
+KONTEXT_INTEGRATION_NAME="github" \
+node scripts/manage-credential-integration.mjs
 ```
 
-Create or update a custom shared-token integration and attach it:
+Ensure the known GitHub integration and attach it:
 
 ```bash
 KONTEXT_SERVICE_ACCOUNT_CLIENT_ID=... \
 KONTEXT_SERVICE_ACCOUNT_CLIENT_SECRET=... \
 KONTEXT_APPLICATION_ID=app_... \
-KONTEXT_CUSTOM_INTEGRATION_NAME="Zapier Notion" \
-KONTEXT_CUSTOM_INTEGRATION_URL="https://mcp.example.com" \
-KONTEXT_SERVER_TOKEN=... \
-node scripts/manage-shared-integration.mjs
+KONTEXT_KNOWN_INTEGRATION=github \
+node scripts/manage-credential-integration.mjs
 ```
 
-Retrieve the credential later from the server side:
+Create or update a custom OAuth integration:
 
 ```bash
-KONTEXT_API_BASE_URL=http://localhost:4000 \
+KONTEXT_SERVICE_ACCOUNT_CLIENT_ID=... \
+KONTEXT_SERVICE_ACCOUNT_CLIENT_SECRET=... \
+KONTEXT_APPLICATION_ID=app_... \
+KONTEXT_INTEGRATION_NAME="Linear" \
+KONTEXT_INTEGRATION_URL="https://mcp.linear.app/sse" \
+KONTEXT_INTEGRATION_AUTH_MODE=oauth \
+node scripts/manage-credential-integration.mjs
+```
+
+Create or update a custom per-user PAT integration:
+
+```bash
+KONTEXT_SERVICE_ACCOUNT_CLIENT_ID=... \
+KONTEXT_SERVICE_ACCOUNT_CLIENT_SECRET=... \
+KONTEXT_APPLICATION_ID=app_... \
+KONTEXT_INTEGRATION_NAME="My API" \
+KONTEXT_INTEGRATION_URL="https://mcp.example.com" \
+KONTEXT_INTEGRATION_AUTH_MODE=user_token \
+node scripts/manage-credential-integration.mjs
+```
+
+Create or update a custom shared-token integration:
+
+```bash
+KONTEXT_SERVICE_ACCOUNT_CLIENT_ID=... \
+KONTEXT_SERVICE_ACCOUNT_CLIENT_SECRET=... \
+KONTEXT_APPLICATION_ID=app_... \
+KONTEXT_INTEGRATION_NAME="Zapier Notion" \
+KONTEXT_INTEGRATION_URL="https://mcp.example.com" \
+KONTEXT_INTEGRATION_AUTH_MODE=server_token \
+KONTEXT_SERVER_TOKEN=... \
+node scripts/manage-credential-integration.mjs
+```
+
+Create or update a remote integration with no credential exchange:
+
+```bash
+KONTEXT_SERVICE_ACCOUNT_CLIENT_ID=... \
+KONTEXT_SERVICE_ACCOUNT_CLIENT_SECRET=... \
+KONTEXT_APPLICATION_ID=app_... \
+KONTEXT_INTEGRATION_NAME="DeepWiki" \
+KONTEXT_INTEGRATION_URL="https://mcp.deepwiki.com/mcp" \
+KONTEXT_INTEGRATION_AUTH_MODE=none \
+node scripts/manage-credential-integration.mjs
+```
+
+Retrieve a credential later from the server side:
+
+```bash
+KONTEXT_API_BASE_URL=https://api.kontext.dev \
 KONTEXT_CLIENT_ID=app_... \
 KONTEXT_CLIENT_SECRET=app_secret_... \
 KONTEXT_INTEGRATION=github \
@@ -206,7 +256,7 @@ KONTEXT_SHOW_TOKEN=true node scripts/require-credential.mjs --json
 
 ## Exact TypeScript SDK shapes
 
-Use the Management SDK for app and integration setup:
+Create a confidential app with the Management SDK:
 
 ```ts
 import { KontextManagementClient } from "@kontext-dev/js-sdk/management";
@@ -219,6 +269,42 @@ const management = new KontextManagementClient({
   },
 });
 
+const { application, oauth } = await management.applications.create({
+  name: "My Server App",
+  oauth: {
+    type: "confidential",
+    redirectUris: ["http://localhost:3000/callback"],
+  },
+});
+```
+
+Create a custom OAuth integration:
+
+```ts
+const { integration } = await management.integrations.create({
+  name: "Linear",
+  url: "https://mcp.linear.app/sse",
+  authMode: "oauth",
+});
+
+await management.applications.attachIntegration(application.id, integration.id);
+```
+
+Create a custom per-user PAT integration:
+
+```ts
+const { integration } = await management.integrations.create({
+  name: "My API",
+  url: "https://mcp.example.com",
+  authMode: "user_token",
+});
+
+await management.applications.attachIntegration(application.id, integration.id);
+```
+
+Create a custom shared-token integration:
+
+```ts
 const { integration } = await management.integrations.create({
   name: "Zapier Notion",
   url: "https://mcp.example.com",
@@ -226,10 +312,22 @@ const { integration } = await management.integrations.create({
   serverToken: process.env.KONTEXT_SERVER_TOKEN!,
 });
 
-await management.applications.attachIntegration("app_123", integration.id);
+await management.applications.attachIntegration(application.id, integration.id);
 ```
 
-Update an existing integration to shared-token mode:
+Create a remote integration with no credential exchange:
+
+```ts
+const { integration } = await management.integrations.create({
+  name: "DeepWiki",
+  url: "https://mcp.deepwiki.com/mcp",
+  authMode: "none",
+});
+
+await management.applications.attachIntegration(application.id, integration.id);
+```
+
+Update an existing integration:
 
 ```ts
 await management.integrations.update("int_123", {
@@ -238,7 +336,20 @@ await management.integrations.update("int_123", {
 });
 ```
 
-Use the server SDK for runtime retrieval:
+Attach an existing integration by lookup:
+
+```ts
+const integrations = await management.integrations.list();
+const github = integrations.items.find((item) => item.name === "github");
+
+if (!github) {
+  throw new Error("GitHub integration not found");
+}
+
+await management.applications.attachIntegration(application.id, github.id);
+```
+
+Retrieve runtime credentials with the Server SDK:
 
 ```ts
 import { Kontext } from "@kontext-dev/js-sdk/server";
@@ -248,46 +359,53 @@ const kontext = new Kontext({
   clientSecret: process.env.KONTEXT_CLIENT_SECRET!,
 });
 
-const credential = await kontext.require("Zapier Notion", {
+const credential = await kontext.require("github", {
   userId: platformUserId,
 });
 
-const response = await fetch("https://upstream.example.com/api", {
+const response = await fetch("https://api.github.com/user", {
   headers: {
     Authorization: credential.authorization,
   },
 });
 ```
 
+Runtime notes:
+- `oauth`: retrieval works after the user authorizes the integration
+- `user_token`: retrieval works after the user stores their PAT or API key
+- `server_token`: retrieval works immediately for all end users of attached apps after the admin sets the token
+- `none`: do not call `Kontext.require(...)` because there is no credential to exchange
+
 ## Notes for the agent
 
 - Use straightforward language.
+- Keep the skill scoped to server-side credential retrieval and the admin setup needed to make that retrieval work.
+- Do not drift into BYOA, external-auth trust, or hosted connect session bootstrap.
+- For known integrations, only use exact recipes the skill actually knows.
+- For existing integrations, prefer exact ID lookup when changing auth mode or renaming.
+- If `authMode` changes, the backend hard-cuts over and clears old per-user connections.
+- If `server_token` is misconfigured, that is an admin problem, not an end-user problem.
 - In user-facing text, call `PLATFORM_USER_ID` the platform's own user ID.
-- Do not tell the user to store a Kontext internal user ID.
-- Keep BYOA out of scope unless the user explicitly asks about trusting their own auth or avoiding double auth.
-- A “template integration” here usually means an existing integration you can resolve and attach. Do not invent a special template API.
-- For confidential app creation, use `oauth.type = "confidential"` and at least one redirect URI.
-- For custom shared-token integrations, use `authMode: "server_token"` and `serverToken`.
-- If retrieval fails with an `integration_required` style error, do not assume it is always a user-connect problem. Shared-token integrations can also fail here when the app does not know that platform user yet.
-- If retrieval fails with an `invalid_target` error mentioning the shared server token, tell the user this is an admin configuration issue, not an end-user action.
-- Do not drift into BYOA setup in this skill.
 
 ## Success output
 
 Return a short summary in this shape:
 
-Credential retrieved.
+Server credential integration configured.
 
-Application auth:
-- OAuth Client ID: <client id>
+Application:
+- Name: <application name>
+- Application ID: <application id>
+- Client ID: <client id>
 
-Request:
-- Integration: <integration>
-- Platform user ID: <user id>
+Integration:
+- Name: <integration name>
+- Integration ID: <integration id>
+- Auth mode: <auth mode>
+- App attachment: <attached_now or already_attached>
 
-Result:
-- Token type: <type>
-- Expires in: <seconds or not provided>
-- Notes: <only include when `expires_in` is not provided; mention that this can happen for admin-managed shared tokens>
+Runtime:
+- Retrieval method: <Kontext.require or not applicable>
+- End-user action: <required or not required>
 
-Only show the raw access token if the user explicitly asked for it.
+Only show secrets or raw access tokens if the user explicitly asked for them.

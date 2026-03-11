@@ -39,10 +39,10 @@ Configure Bring your own auth on a confidential Kontext application with a servi
 
 Set up and retrieve server-side integration credentials for a confidential Kontext application.
 
-**Triggers on**: Requests to create or update a confidential app for server-side credential retrieval, attach an existing integration, create or update a custom shared-token integration with a service account, or fetch GitHub, Google, or other integration credentials from backend code using clientId, clientSecret, and userId.
+**Triggers on**: Requests to create or update a confidential app for server-side credential retrieval, attach an existing template integration, ensure a known integration like GitHub, create or update a custom remote integration with authMode oauth, user_token, server_token, or none, or fetch GitHub, Google, or other integration credentials from backend code using clientId, clientSecret, and userId.
 
-**Does**: Uses the service account to set up the app and integration side for server SDK retrieval, supports custom `server_token` integrations, and uses the server SDK flow to retrieve either user-managed or admin-managed shared credentials later.
+**Does**: Uses the service account to set up the app and remote integrations for server SDK retrieval, covers template and custom remote integrations across all server-side `Kontext.require(...)` auth modes, and uses the server SDK flow to retrieve either user-managed or admin-managed shared credentials later.
 
 **Does not**: Configure Bring your own auth or create hosted connect sessions.
 
-**Usage**: Ask to use `$kontext-sdk-credentials` when setting up shared-token integrations for server SDK use or retrieving credentials from the server side.
+**Usage**: Ask to use `$kontext-sdk-credentials` when setting up remote integrations for server SDK credential retrieval or retrieving credentials from the server side.
