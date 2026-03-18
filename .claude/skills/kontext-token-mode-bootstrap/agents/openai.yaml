@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kontext Token Mode Bootstrap"
+  short_description: "Bootstrap a public PKCE app and token-mode integration setup"
+  default_prompt: "Use $kontext-token-mode-bootstrap to bootstrap a public PKCE app and generic token-mode integration setup with a service account."

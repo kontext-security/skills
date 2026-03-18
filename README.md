@@ -46,3 +46,17 @@ Set up and retrieve server-side integration credentials for a confidential Konte
 **Does not**: Configure Bring your own auth or create hosted connect sessions.
 
 **Usage**: Ask to use `$kontext-sdk-credentials` when setting up remote integrations for server SDK credential retrieval or retrieving credentials from the server side.
+
+---
+
+### kontext-token-mode-bootstrap
+
+Bootstrap a public Kontext application for token-mode runtime credential exchange with a service account.
+
+**Triggers on**: Requests to replace hardcoded end-user provider tokens with `kontext.require(integration, token)`, bootstrap a public PKCE app, ensure and attach a user-chosen integration, or write the public client ID into a local env file.
+
+**Does**: Uses the service account to create or reuse a public PKCE app, ensures a generic integration from caller-supplied provider details, attaches it to the app, writes the public client ID into a local env file when asked, and guides the runtime cutover to token mode.
+
+**Does not**: Configure Bring your own auth or confidential `userId` retrieval. Those stay in separate skills.
+
+**Usage**: Ask to use `$kontext-token-mode-bootstrap` when removing hardcoded end-user credentials and moving an app to Kontext token mode.
