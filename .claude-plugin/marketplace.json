@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "kontext-skills",
-      "description": "SDK integration guides for TypeScript, React, Vercel AI SDK, Cloudflare Agents, and more. Helps developers add runtime identity, scoped credentials, and audit trails to AI agents.",
+      "description": "SDK integration guides for TypeScript, Go, React, Vercel AI SDK, Cloudflare Agents, and more. Helps developers add runtime identity, scoped credentials, and audit trails to AI agents.",
       "version": "0.1.0",
       "author": {
         "name": "Kontext",
@@ -20,7 +20,7 @@
       "source": "./",
       "category": "development",
       "homepage": "https://kontext.dev",
-      "tags": ["kontext", "sdk", "mcp", "identity", "credentials", "oauth", "agents"]
+      "tags": ["kontext", "sdk", "go", "mcp", "identity", "credentials", "oauth", "agents"]
     }
   ]
 }

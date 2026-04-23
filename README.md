@@ -60,3 +60,14 @@ Bootstrap a public Kontext application for token-mode runtime credential exchang
 **Does not**: Configure Bring your own auth or confidential `userId` retrieval. Those stay in separate skills.
 
 **Usage**: Ask to use `$kontext-token-mode-bootstrap` when removing hardcoded end-user credentials and moving an app to Kontext token mode.
+
+---
+
+### kontext-go-integrator
+
+Integrate Kontext into Go agents using `github.com/anthropics/anthropic-sdk-go`.
+
+**Covers**: Anthropic Go SDK client creation, Kontext credential resolution, request telemetry, prompt tracking, manual tool dispatcher wrapping with `ObserveTool`, and ToolRunner wrapping with `WrapTools`.
+**Triggers on**: Go repos importing `github.com/anthropics/anthropic-sdk-go`, requests to add Kontext to an Anthropic Go agent, or requests to get traces from a Go SDK agent.
+
+**Usage**: Ask to use `$kontext-go-integrator` when adding Kontext to an Anthropic Go SDK agent.

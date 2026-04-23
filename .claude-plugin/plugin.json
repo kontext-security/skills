@@ -1,6 +1,6 @@
 {
   "name": "kontext-skills",
-  "description": "Skills for integrating the Kontext identity control plane into AI agent architectures. Includes SDK integration guides for TypeScript, React, Vercel AI SDK, Cloudflare Agents, and more.",
+  "description": "Skills for integrating the Kontext identity control plane into AI agent architectures. Includes SDK integration guides for TypeScript, Go, React, Vercel AI SDK, Cloudflare Agents, and more.",
   "version": "0.1.0",
   "author": {
     "name": "Kontext",
