@@ -1,4 +1,0 @@
-interface:
-  display_name: "Use Graphite"
-  short_description: "Manage stacked PRs with Graphite CLI workflows"
-  default_prompt: "Use $use-graphite to manage stacked PRs and submit changes with gt commands."

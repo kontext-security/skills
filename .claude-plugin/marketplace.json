@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "kontext-skills",
   "metadata": {
-    "description": "Skills for integrating the Kontext identity control plane into AI agent architectures."
+    "description": "Get Started with Kontext onboarding for Claude Code and long-running Go agents."
   },
   "owner": {
     "name": "Kontext",
@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "kontext-skills",
-      "description": "SDK integration guides for TypeScript, Go, React, Vercel AI SDK, Cloudflare Agents, and more. Helps developers add runtime identity, scoped credentials, and audit trails to AI agents.",
+      "description": "One public onboarding skill for Claude Code on macOS and long-running Anthropic Go agents.",
       "version": "0.1.0",
       "author": {
         "name": "Kontext",
@@ -19,8 +19,8 @@
       },
       "source": "./",
       "category": "development",
-      "homepage": "https://kontext.dev",
-      "tags": ["kontext", "sdk", "go", "mcp", "identity", "credentials", "oauth", "agents"]
+      "homepage": "https://kontext.security",
+      "tags": ["kontext", "claude-code", "go", "agents", "credentials"]
     }
   ]
 }
