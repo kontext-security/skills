@@ -95,11 +95,14 @@ console.log("Return to the agent. It will patch and verify the Go repo now.");
 async function waitForLocalHandoff(token) {
   const deadline = Date.now() + timeoutMs;
   const pollUrl = new URL(`${appUrl}/api/get-started/setup-sessions/local-handoff`);
-  pollUrl.searchParams.set("claimId", localHandoffClaimId);
-  pollUrl.searchParams.set("token", token);
 
   while (Date.now() < deadline) {
-    const res = await fetch(pollUrl, { cache: "no-store" });
+    const res = await fetch(pollUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ claimId: localHandoffClaimId, token }),
+      cache: "no-store",
+    });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(text || `Setup handoff failed with status ${res.status}`);
