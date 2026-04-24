@@ -17,7 +17,15 @@ function parseRemote(raw) {
     host = match?.[1] || "";
     path = match?.[2] || "";
   } else {
-    const url = new URL(value);
+    let url;
+    try {
+      url = new URL(value);
+    } catch {
+      return null;
+    }
+    if (!url.host) {
+      return null;
+    }
     host = url.host;
     path = url.pathname.replace(/^\/+/, "");
   }
@@ -55,6 +63,23 @@ try {
 }
 
 const parsed = parseRemote(remote);
+if (!parsed) {
+  console.log(
+    JSON.stringify(
+      {
+        ok: false,
+        reason: "unsupported_git_remote",
+        message:
+          "Long-running Go setup requires a hosted git remote such as GitHub.",
+        remote,
+      },
+      null,
+      2,
+    ),
+  );
+  process.exit(2);
+}
+
 const repoBasename = basename(parsed.path);
 const fingerprint = createHash("sha256")
   .update(`${remote}\n${repoBasename}`)
