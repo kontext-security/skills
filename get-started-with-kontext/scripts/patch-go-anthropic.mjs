@@ -35,7 +35,7 @@ if (!target) {
   process.exit(2);
 }
 
-execFileSync("go", ["get", "github.com/kontext-security/kontext-go@v0.2.0"], {
+execFileSync("go", ["get", "github.com/kontext-security/kontext-go@v0.2.1"], {
   stdio: "inherit",
 });
 
