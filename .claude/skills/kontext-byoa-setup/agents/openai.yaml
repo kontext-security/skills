@@ -1,4 +1,0 @@
-interface:
-  display_name: "Kontext Bring Your Own Auth Setup"
-  short_description: "Configure Bring your own auth on a confidential Kontext application via the Management API"
-  default_prompt: "Use $kontext-byoa-setup to configure Bring your own auth on a confidential Kontext application with a service account."

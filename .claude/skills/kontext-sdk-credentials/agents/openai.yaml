@@ -1,4 +1,0 @@
-interface:
-  display_name: "Kontext Server Credentials"
-  short_description: "Set up remote integrations for server SDK retrieval and retrieve credentials from a confidential app"
-  default_prompt: "Use $kontext-sdk-credentials to configure a confidential app and its remote integrations for server-side retrieval or retrieve a credential with Kontext.require(...)."
