@@ -39,141 +39,105 @@ Do not patch Go code. Do not install aliases. Do not edit shell rc files.
 
 Use this branch only for Anthropic Go SDK agents that run unattended from a repo.
 
-Before touching code, explain briefly why the local repo is being inspected:
+Explain the local inspection once:
 
 ```text
-I’m going to inspect this local Go repo so Kontext can find where provider credentials are used and patch the exact call sites. I only read source files and git metadata; I do not read or print secret values.
+I’m going to inspect this Go repo, open one browser setup link, then patch and verify it automatically. I do not read or print secret values.
 ```
 
-### Supported rewrite shapes
+Then run the flow exactly. Do not freehand patch Go code.
 
-- `github.com/anthropics/anthropic-sdk-go` client construction in application code
-- direct Anthropic credential configuration such as `option.WithAPIKey(...)`
-- `ANTHROPIC_API_KEY` environment-key usage
-- existing Kontext Go examples using `ProviderAnthropic`
+### 1. Inspect
 
-### Unsupported rewrite shapes
-
-- custom raw HTTP clients for Anthropic
-- non-Anthropic LLM clients
-- multi-provider abstraction layers
-- vendored code
-- generated code
-- tests, unless they are explicit integration fixtures
-
-If unsupported, still complete browser setup and provider attachment, but do not rewrite code. Report what you found and why rewriting stopped.
-
-### Setup flow
-
-1. Run:
+Run:
 
 ```bash
 node <this-skill-dir>/scripts/inspect-go-repo.mjs
 ```
 
-2. If the script reports `missing_git_remote`, stop and ask the user to add a git remote before long-running Go setup.
-3. Show a concise pre-patch summary:
+If the script reports `missing_git_remote` or `unsupported_git_remote`, stop and report that long-running Go setup needs a hosted git remote.
+
+If `supported` is false, continue browser setup only if the user still wants app/provider setup, but do not rewrite code.
+
+Show a concise summary:
 
 ```text
-I found a supported Anthropic Go setup in:
+Found Anthropic Go SDK usage in:
 - <file paths>
 
-I also found these credential references and provider suggestions:
-- ANTHROPIC_API_KEY -> Anthropic, handle: anthropic
-
-Kontext will create the runtime app automatically. In the browser, you only need to create or select the provider this agent should use.
+Suggested provider:
+- <display name>, handle: <handle>
 ```
 
-If `providerSuggestions` contains more than one item, list every suggestion. If it contains no items, say that no credential env vars were found and that the browser will still let the user create/select a provider.
+### 2. Browser Setup And Local Env Handoff
 
-4. Run:
+Run this as a long-running command:
 
 ```bash
-node <this-skill-dir>/scripts/setup-url.mjs
+node <this-skill-dir>/scripts/run-local-setup.mjs
 ```
 
-5. Do not open the printed browser URL yourself. Do not use Playwright, browser-use, computer-use, or `open` for this step unless the user explicitly asks you to drive the browser. Show the URL to the user and ask them to open it.
-6. Tell the user:
+Relay the printed setup URL to the user. Do not ask them to copy secrets. The browser page owns provider creation/selection and sends `.env.kontext` back to the local receiver after the user clicks the finish button.
+
+Wait until the command exits successfully. It must create:
 
 ```text
-Open this setup URL in your browser:
-<browserUrl>
-
-Create or select the suggested provider for this agent, then choose “Use for this agent”.
-After provider selection, save the `.env.kontext` file from the browser page for local testing, or put the same values into your runtime secret store.
-
-When the browser page says setup is complete, come back and say: done.
+.env.kontext
+.kontext-setup-state.json
 ```
 
-7. Wait for the user to say setup is done, then check setup state for the selected provider handle. Never copy `KONTEXT_CLIENT_SECRET` into the transcript, files, logs, or snapshots.
-8. Add the Kontext Go module with:
+Never print `.env.kontext`, `KONTEXT_CLIENT_SECRET`, or command output containing secret values.
+
+### 3. Deterministic Go Patch
+
+Run:
 
 ```bash
-go get github.com/kontext-security/kontext-go@v0.2.0
+node <this-skill-dir>/scripts/patch-go-anthropic.mjs
 ```
 
-9. Ensure local env files are ignored by git. If `.gitignore` exists, add these lines if missing:
+The patcher owns:
 
-```gitignore
-.env
-.env.*
-!.env.example
-```
+- adding `github.com/kontext-security/kontext-go@v0.2.0`
+- adding `.env`, `.env.*`, and `.kontext-setup-state.json` to `.gitignore`
+- replacing direct Anthropic env-key usage
+- adding `kontext.Start(...)`
+- using the exact selected provider handle
+- adding request telemetry
+- wrapping the supported tool boundary
+- running `gofmt`, `go mod tidy`, and `go test ./...`
 
-Do not create `.env.kontext` yourself and do not ask the user to paste `KONTEXT_CLIENT_SECRET` into the chat. The browser page is the only place that reveals the secret.
+If the patcher fails, report the exact unsupported shape. Do not guess another rewrite.
 
-10. Patch with the exact selected handle:
+### 4. Verify Runtime Shape
 
-```go
-kx, err := kontext.Start(ctx, kontext.Config{
-    ServiceName: "...",
-    Environment: "...",
-    ClientID: os.Getenv("KONTEXT_CLIENT_ID"),
-    ClientSecret: os.Getenv("KONTEXT_CLIENT_SECRET"),
-    URL: os.Getenv("KONTEXT_URL"),
-    Credentials: kontext.CredentialsConfig{
-        Mode: kontext.CredentialModeProvide,
-        Providers: []kontext.Provider{"<selected-provider-handle>"},
-    },
-})
-
-client := anthropic.NewClient(
-    kxanthropic.WithCredentialsFor(kx, "<selected-provider-handle>"),
-    kxanthropic.WithRequestTelemetry(kx),
-)
-```
-
-11. Add `TrackPrompt(...)` only when the prompt variable is obvious.
-12. Wrap the existing tool boundary with `ObserveTool(...)` or `WrapTools(...)`.
-13. Preserve the existing Anthropic loop and tool semantics.
-14. Run:
+Run:
 
 ```bash
-gofmt -w <changed-go-files>
-go mod tidy
-go test ./...
+env -u ANTHROPIC_API_KEY sh -c 'set -a; . ./.env.kontext; set +a; go run ./cmd/agent'
 ```
 
-Final response must include no secrets and must include:
+If this command would print sensitive values, stop. Normal agent output is okay; the env file itself must not be printed.
+
+### Final Response
+
+Final response must include no secrets and must be factual:
 
 ```text
-Configured:
-- Runtime app: created/repaired
-- Provider: <provider-handle>
-- Go files patched: N
-- Tests: passed/failed/skipped
+Kontext is installed.
 
-Next:
-1. Save the browser `.env.kontext` block in `.env.kontext` or put the values in your runtime secret store.
-2. For local testing, run: `set -a; source .env.kontext; set +a; go run ./cmd/agent`
-3. Do not commit `.env.kontext`.
-4. Do not set ANTHROPIC_API_KEY for this flow.
+Provider: <selected-provider-handle>
+Runtime env: .env.kontext
+Files patched:
+- <paths>
+Tests: passed
+Runtime: started without ANTHROPIC_API_KEY
 ```
 
-## Privacy rules
+## Privacy Rules
 
-- Never run commands that print `KONTEXT_CLIENT_SECRET`.
-- Never write `KONTEXT_CLIENT_SECRET` into generated files.
-- Never include `KONTEXT_CLIENT_SECRET` in test snapshots.
-- Never echo runtime secrets in the agent transcript.
-- Secret rotation is an explicit browser action only.
+- Never print `KONTEXT_CLIENT_SECRET`.
+- Never paste `.env.kontext` into the transcript.
+- Never commit `.env.kontext`.
+- Never ask the user to paste secrets into chat.
+- Browser-to-local env handoff requires the user clicking the explicit finish button.
