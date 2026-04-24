@@ -55,19 +55,12 @@ const repoFingerprint = createHash("sha256")
   .digest("hex")
   .slice(0, 32);
 const nonce = randomBytes(24).toString("base64url");
-const allowedCallbackOrigins = new Set([
-  new URL(appUrl).origin,
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
-]);
-
 const server = createServer(async (req, res) => {
   const origin = req.headers.origin;
-  if (origin && allowedCallbackOrigins.has(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  }
+  res.setHeader("Access-Control-Allow-Origin", origin || "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Private-Network", "true");
   res.setHeader("Access-Control-Max-Age", "600");
   if (req.method === "OPTIONS") {
     res.writeHead(204);
