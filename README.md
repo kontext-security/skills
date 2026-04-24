@@ -5,7 +5,13 @@ One public onboarding skill for Kontext v1.
 ## Install
 
 ```bash
-npx skills add kontext-dev/skills
+npx skills add kontext-security/skills
+```
+
+If you want a non-interactive install for all supported agents:
+
+```bash
+npx skills add kontext-security/skills --all
 ```
 
 Then tell your agent:
