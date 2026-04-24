@@ -39,6 +39,12 @@ Do not patch Go code. Do not install aliases. Do not edit shell rc files.
 
 Use this branch only for Anthropic Go SDK agents that run unattended from a repo.
 
+Before touching code, explain briefly why the local repo is being inspected:
+
+```text
+I’m going to inspect this local Go repo so Kontext can find where provider credentials are used and patch the exact call sites. I only read source files and git metadata; I do not read or print secret values.
+```
+
 ### Supported rewrite shapes
 
 - `github.com/anthropics/anthropic-sdk-go` client construction in application code
@@ -69,14 +75,16 @@ node <this-skill-dir>/scripts/inspect-go-repo.mjs
 3. Show a concise pre-patch summary:
 
 ```text
-I found a supported Anthropic Go setup.
+I found a supported Anthropic Go setup in:
+- <file paths>
 
-Planned changes:
-1. Add confidential Kontext config loading.
-2. Replace direct Anthropic API-key credentials with provider handle targeting.
-3. Preserve request telemetry and ObserveTool usage.
-4. Run gofmt, go mod tidy, and go test ./...
+I also found these credential references and provider suggestions:
+- ANTHROPIC_API_KEY -> Anthropic, handle: anthropic
+
+Kontext will create the runtime app automatically. In the browser, you only need to create or select the provider this agent should use.
 ```
+
+If `providerSuggestions` contains more than one item, list every suggestion. If it contains no items, say that no credential env vars were found and that the browser will still let the user create/select a provider.
 
 4. Run:
 
@@ -91,8 +99,8 @@ node <this-skill-dir>/scripts/setup-url.mjs
 Open this setup URL in your browser:
 <browserUrl>
 
-Create or select the custom provider this agent should use, then choose “Use for this agent”.
-Copy the environment variables from the browser page into the runtime environment for your Go agent.
+Create or select the suggested provider for this agent, then choose “Use for this agent”.
+After provider selection, copy the environment variables from the browser page into your runtime secret store.
 
 When the browser page says setup is complete, come back and say: done.
 ```
