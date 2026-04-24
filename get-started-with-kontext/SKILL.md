@@ -27,27 +27,16 @@ V1 supports macOS only.
    - If `kontext` exists in `PATH`, run `kontext --help` and `kontext --version`.
    - Otherwise install with the official Homebrew path:
      `brew install kontext-security/tap/kontext`
-4. Create a convenient Claude Code launcher without editing shell rc files:
-
-```bash
-mkdir -p .kontext/bin
-cat > .kontext/bin/claude <<'SH'
-#!/bin/sh
-exec kontext start --agent claude "$@"
-SH
-chmod +x .kontext/bin/claude
-```
-
-5. End by saying:
+4. End by saying:
 
 ```text
-Claude Code is ready through Kontext.
+Kontext CLI is installed.
 
-Run Claude Code in this repo with:
-PATH="$PWD/.kontext/bin:$PATH" claude
+Start Claude Code through Kontext with:
+kontext start --agent claude
 ```
 
-Do not patch Go code. Do not edit shell rc files.
+Do not create aliases, wrapper scripts, or shell rc edits. Do not patch Go code.
 
 ## Long-running Go agent in this repo
 
