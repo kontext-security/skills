@@ -101,7 +101,7 @@ node <this-skill-dir>/scripts/patch-go-anthropic.mjs
 
 The patcher owns:
 
-- adding `github.com/kontext-security/kontext-go@v0.2.1`
+- adding `github.com/kontext-security/kontext-go@v0.3.0`
 - adding the env file and `.kontext-setup-state.json` to `.gitignore`
 - replacing direct Anthropic env-key usage
 - adding `kontext.Start(...)`
