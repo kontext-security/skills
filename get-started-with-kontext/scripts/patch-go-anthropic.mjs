@@ -118,8 +118,6 @@ function patchRunFunction(text) {
 \t}
 \tdefer kx.End(ctx)
 
-\tkx.TrackPrompt(ctx, prompt)
-
 `;
   return text.replace(marker, bootstrap);
 }
