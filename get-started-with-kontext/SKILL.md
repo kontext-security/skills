@@ -16,6 +16,17 @@ What are you setting up?
 
 Do not mention PKCE, public clients, confidential clients, service accounts, org keys, or internal patcher modes in the first prompt.
 
+The browser setup screen owns the product-specific mode choice:
+
+- CLI setup
+- Go setup: remove hardcoded provider credentials and add tool-call telemetry
+- Go setup: keep existing provider credentials and add tool-call telemetry only
+
+For Go setup, do not ask the user to choose again in chat. The browser handoff must return one of:
+
+- `credential_injection` for "remove hardcoded creds and add telemetry for toolcalls"
+- `telemetry_only` for "only add telemetry for toolcalls"
+
 ## Claude Code on this machine
 
 V1 supports macOS only.
@@ -80,7 +91,9 @@ Run this as a long-running command:
 node <this-skill-dir>/scripts/run-local-setup.mjs
 ```
 
-Relay the printed setup URL to the user. Do not open the URL yourself. Do not use Playwright, browser-use, computer-use, `open`, or any browser automation for this step unless the user explicitly asks you to drive the browser in that same message. Do not ask the user to copy secrets. The browser page owns provider creation/selection only when the supported Anthropic key path was detected. Provider setup is optional: if the user chooses tracing only, or no supported Anthropic key path was detected, the browser sends the runtime env values without a selected provider. The browser must not post to localhost.
+Relay the printed setup URL to the user. Do not open the URL yourself. Do not use Playwright, browser-use, computer-use, `open`, or any browser automation for this step unless the user explicitly asks you to drive the browser in that same message. Do not ask the user to copy secrets.
+
+The browser page owns app setup and the Go mode choice. Provider setup is required only when the user chooses credential replacement. Provider setup is skipped when the user chooses telemetry-only, because that mode intentionally preserves the repo's existing Anthropic key path. The browser sends runtime env values plus `setupMode`. The browser must not post to localhost.
 
 Wait until the command exits successfully. It must create:
 
@@ -103,8 +116,8 @@ The patcher owns:
 
 - adding `github.com/kontext-security/kontext-go@v0.3.0`
 - adding the env file and `.kontext-setup-state.json` to `.gitignore`
-- replacing direct `ANTHROPIC_API_KEY` Anthropic SDK usage when credential injection is enabled
-- preserving existing Anthropic env-key usage when tracing-only setup is selected
+- replacing direct `ANTHROPIC_API_KEY` Anthropic SDK usage only when credential injection is enabled
+- preserving existing Anthropic env-key usage when telemetry-only setup is selected
 - adding `kontext.Start(...)`
 - using the exact selected provider handle when credential injection is enabled
 - adding request telemetry
@@ -121,13 +134,15 @@ For credential-injection setup, run:
 env -u ANTHROPIC_API_KEY sh -c 'set -a; . "$(node -e "console.log(JSON.parse(require(\"fs\").readFileSync(\".kontext-setup-state.json\", \"utf8\")).envFile || \".env\")")"; set +a; go run ./cmd/agent'
 ```
 
-For tracing-only setup, keep the repo's existing Anthropic environment available and run:
+For telemetry-only setup, keep the repo's existing Anthropic environment available and run:
 
 ```bash
 sh -c 'set -a; . "$(node -e "console.log(JSON.parse(require(\"fs\").readFileSync(\".kontext-setup-state.json\", \"utf8\")).envFile || \".env\")")"; set +a; go run ./cmd/agent'
 ```
 
 If this command would print sensitive values, stop. Normal agent output is okay; the env file itself must not be printed.
+
+If telemetry-only setup is selected and this Codex process cannot see `ANTHROPIC_API_KEY`, do not rerun browser setup and do not ask the user to switch to credential injection. That is not a setup failure. Report that code patching and tests passed, and that the runtime smoke must be launched from the user's shell where their existing Anthropic key is exported. Give the exact command above without printing any env values.
 
 ### Final Response
 

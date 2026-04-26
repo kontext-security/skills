@@ -61,6 +61,22 @@ url.searchParams.set("repoBasename", repoBasename);
 url.searchParams.set("gitRemoteHost", parsed.host);
 url.searchParams.set("gitRemotePath", parsed.path);
 url.searchParams.set("providerSuggestions", JSON.stringify(scanProviderSuggestions()));
+url.searchParams.set("product", "go_anthropic_agent");
+url.searchParams.set(
+  "supportedSetupModes",
+  JSON.stringify([
+    {
+      id: "credential_injection",
+      label: "Remove hardcoded credentials and add tool-call telemetry",
+      requiresProvider: true,
+    },
+    {
+      id: "telemetry_only",
+      label: "Only add telemetry for tool calls",
+      requiresProvider: false,
+    },
+  ]),
+);
 url.searchParams.set("localHandoffToken", localHandoffToken);
 url.searchParams.set("localHandoffClaimId", localHandoffClaimId);
 
@@ -75,8 +91,9 @@ upsertEnvFile(envFile, handoff.runtimeEnv);
 chmodSync(envFile, 0o600);
 ensureGitignore(envFile);
 
+const setupMode = normalizeSetupMode(handoff);
 const state = {
-  setupMode: handoff.setupMode || (handoff.selectedProviderHandle ? "credential_injection" : "telemetry_only"),
+  setupMode,
   selectedProviderHandle: handoff.selectedProviderHandle || null,
   selectedProviderDisplayName: handoff.selectedProviderDisplayName || null,
   runtimeAppName: handoff.runtimeAppName || null,
@@ -94,6 +111,17 @@ console.log(
   `\nUpdated ${envFile} for ${state.setupMode === "telemetry_only" ? "tool/request tracing" : `provider: ${state.selectedProviderHandle || "unknown"}`}`,
 );
 console.log("Return to the agent. It will patch and verify the Go repo now.");
+
+function normalizeSetupMode(handoff) {
+  const setupMode = handoff.setupMode || (handoff.selectedProviderHandle ? "credential_injection" : "telemetry_only");
+  if (!["credential_injection", "telemetry_only"].includes(setupMode)) {
+    throw new Error(`Unsupported setup mode from browser: ${setupMode}`);
+  }
+  if (setupMode === "credential_injection" && !handoff.selectedProviderHandle) {
+    throw new Error("Credential replacement requires a selected provider handle.");
+  }
+  return setupMode;
+}
 
 async function waitForLocalHandoff(token) {
   const deadline = Date.now() + timeoutMs;

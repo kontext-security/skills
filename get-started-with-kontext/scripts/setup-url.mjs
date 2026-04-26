@@ -64,6 +64,22 @@ url.searchParams.set("repoFingerprint", repoFingerprint);
 url.searchParams.set("repoBasename", repoBasename);
 url.searchParams.set("gitRemoteHost", parsed.host);
 url.searchParams.set("gitRemotePath", parsed.path);
+url.searchParams.set("product", "go_anthropic_agent");
+url.searchParams.set(
+  "supportedSetupModes",
+  JSON.stringify([
+    {
+      id: "credential_injection",
+      label: "Remove hardcoded credentials and add tool-call telemetry",
+      requiresProvider: true,
+    },
+    {
+      id: "telemetry_only",
+      label: "Only add telemetry for tool calls",
+      requiresProvider: false,
+    },
+  ]),
+);
 const providerSuggestions = scanProviderSuggestions();
 if (providerSuggestions.length > 0) {
   url.searchParams.set("providerSuggestions", JSON.stringify(providerSuggestions));
